@@ -216,12 +216,14 @@
 #![cfg_attr(test, deny(warnings))]
 
 extern crate libc;
-extern crate libssh2_sys as raw;
+pub extern crate libssh2_sys;
 #[macro_use]
 extern crate bitflags;
 extern crate parking_lot;
 
 use std::ffi::CStr;
+
+use libssh2_sys as raw;
 
 pub use agent::{Agent, PublicKey};
 pub use channel::{Channel, ExitSignal, ReadWindow, Stream, WriteWindow};
