@@ -32,7 +32,7 @@ fn main() {
         }
     }
 
-    if !Path::new("libssh2/.git").exists() {
+    if !Path::new("libssh2/src").exists() {
         let _ = Command::new("git")
             .args(&["submodule", "update", "--init"])
             .status();
