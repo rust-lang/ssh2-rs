@@ -100,6 +100,7 @@ pub(crate) struct SessionInner {
     tcp: Option<Box<dyn AsRawFd>>,
     #[cfg(windows)]
     tcp: Option<Box<dyn AsRawSocket>>,
+    freed: bool,
 }
 
 // The compiler doesn't know that it is Send safe because of the raw
@@ -168,6 +169,7 @@ impl Session {
                     inner: Arc::new(Mutex::new(SessionInner {
                         raw: ret,
                         tcp: None,
+                        freed: false,
                     })),
                 })
             }
@@ -1123,6 +1125,47 @@ impl Session {
         let inner = self.inner();
         unsafe { let _ = raw::libssh2_trace(inner.raw, bitmask.bits() as c_int); }
     }
+
+    /// Attempts to free the session.
+    ///
+    /// There are a few cases where this may not succeed:
+    /// - If in nonblocking mode, may result in `LIBSSH2_ERROR_EAGAIN` if the
+    ///   operation would block.
+    /// - If a timeout is set, may result in `LIBSSH2_ERROR_TIMEOUT`.
+    /// - If cloned sessions or objects created from this session still exist,
+    ///   may result in `LIBSSH2_ERROR_BAD_USE`.
+    ///
+    /// This happens because `libssh2_session_free` combines freeing memory
+    /// with IO to close the session cleanly. Nonblocking callers should call
+    /// this function explicitly instead of relying on `drop` - otherwise it
+    /// would result in a memory leak if the session fails to free due to
+    /// blocking.
+    pub fn free(self) -> Result<(), (Self, Error)> {
+        let inner = match Arc::try_unwrap(self.inner) {
+            Ok(inner) => inner,
+            Err(inner) => {
+                let err = Error::new(
+                    ErrorCode::Session(raw::LIBSSH2_ERROR_BAD_USE),
+                    "cannot free session while other handles exist",
+                );
+                return Err((Session { inner }, err));
+            }
+        };
+        let mut inner = inner.into_inner();
+        let rc = unsafe { raw::libssh2_session_free(inner.raw) };
+        if rc >= 0 {
+            inner.freed = true;
+            Ok(())
+        } else {
+            let err = inner.rc(rc).unwrap_err();
+            Err((
+                Session {
+                    inner: Arc::new(Mutex::new(inner)),
+                },
+                err,
+            ))
+        }
+    }
 }
 
 #[cfg(unix)]
@@ -1174,8 +1217,10 @@ impl SessionInner {
 
 impl Drop for SessionInner {
     fn drop(&mut self) {
-        unsafe {
-            let _rc = raw::libssh2_session_free(self.raw);
+        if !self.freed {
+            unsafe {
+                let _rc = raw::libssh2_session_free(self.raw);
+            }
         }
     }
 }
