@@ -30,7 +30,7 @@ jobs:
       run: |
         rustc -V
         cargo -V
-        cargo test --no-run --target %TARGET%
-        cargo run --manifest-path systest/Cargo.toml --target %TARGET%
-        cargo test --no-run --target %TARGET% --features openssl-on-win32,vendored-openssl
-      shell: cmd
+        cargo test --no-run --target $env:TARGET
+        cargo run --manifest-path systest/Cargo.toml --target $env:TARGET
+        cargo test --no-run --target $env:TARGET --features openssl-on-win32,vendored-openssl
+      shell: pwsh
