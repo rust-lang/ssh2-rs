@@ -1,5 +1,6 @@
 extern crate cc;
 extern crate pkg_config;
+extern crate semver;
 
 #[cfg(target_env = "msvc")]
 extern crate vcpkg;
@@ -8,6 +9,15 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+/*
+ In libssh2 v1.9.0 and earlier versions, the SSH_MSG_DISCONNECT logic in packet.c has an integer
+ overflow in a bounds check, enabling an attacker to specify an arbitrary (out-of-bounds) offset
+ for a subsequent memory read. A crafted SSH server may be able to disclose sensitive information
+ or cause a denial of service condition on the client system when a user connects to the server.
+*/
+
+const MIN_LIBSSH2_VERSION: semver::Version = semver::Version::new(1, 10, 0);
 
 fn main() {
     let zlib_ng_compat = env::var("CARGO_FEATURE_ZLIB_NG_COMPAT").is_ok();
@@ -22,9 +32,17 @@ fn main() {
     println!("cargo:rerun-if-env-changed=LIBSSH2_SYS_USE_PKG_CONFIG");
     if env::var("LIBSSH2_SYS_USE_PKG_CONFIG").is_ok() {
         if zlib_ng_compat {
-            panic!("LIBSSH2_SYS_USE_PKG_CONFIG set, but cannot use zlib-ng-compat with system libssh2");
+            panic!(
+                "LIBSSH2_SYS_USE_PKG_CONFIG set, but cannot use zlib-ng-compat with system libssh2"
+            );
         }
         if let Ok(lib) = pkg_config::find_library("libssh2") {
+            if semver::Version::parse(&lib.version).unwrap() < MIN_LIBSSH2_VERSION {
+                println!(
+                    "cargo:warning=libssh2 {} is older than the recommended minimum {}",
+                    lib.version, MIN_LIBSSH2_VERSION
+                );
+            }
             for path in &lib.include_paths {
                 println!("cargo:include={}", path.display());
             }
