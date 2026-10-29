@@ -459,38 +459,27 @@ impl Sftp {
     pub fn shutdown(&mut self) -> Result<(), Error> {
         // We cannot shutdown the SFTP if files are still open, etc, as these store a ref to the sftp in libssh2.
         // We have to make sure we are the last reference to it.
-        match self.inner.take() {
-            Some(sftp_inner_arc) => {
-                // We were not already un-initialized
-                match Arc::try_unwrap(sftp_inner_arc) {
-                    Ok(mut sftp_inner_wrapper) => {
-                        // Early drop
-                        let sftp_inner = sftp_inner_wrapper.0.take().expect(
-                            "We were holding an Arc<SftpInnerDropWrapper>, \
-                                    so nobody could unset this (set on creation)",
-                        );
-                        sftp_inner
-                            .sess
-                            .lock()
-                            .rc(unsafe { raw::libssh2_sftp_shutdown(sftp_inner.raw) })?;
-                        Ok(())
-                    }
-                    Err(sftp_inner_arc) => {
-                        // We are failing shutdown as there are files left open, keep this object usable
-                        self.inner = Some(sftp_inner_arc);
-                        Err(Error::from_errno(ErrorCode::Session(
-                            raw::LIBSSH2_ERROR_BAD_USE,
-                        )))
-                    }
-                }
-            }
-            None => {
-                // We have already shut this down. Shutting down twice is a mistake from the caller code
-                Err(Error::from_errno(ErrorCode::Session(
-                    raw::LIBSSH2_ERROR_BAD_USE,
-                )))
-            }
+        let wrapper = self
+            .inner
+            .as_mut()
+            .and_then(Arc::get_mut)
+            .ok_or_else(|| Error::from_errno(ErrorCode::Session(raw::LIBSSH2_ERROR_BAD_USE)))?;
+        let inner = wrapper.0.as_ref().expect(
+            "We were holding an Arc<SftpInnerDropWrapper>, \
+                    so nobody could unset this (set on creation)",
+        );
+        let rc = inner
+            .sess
+            .lock()
+            .rc(unsafe { raw::libssh2_sftp_shutdown(inner.raw) });
+
+        // EAGAIN leaves the native handle alive so shutdown can be retried (or
+        // completed by Drop). Every other result consumes the native handle.
+        if !matches!(&rc, Err(e) if e.code() == ErrorCode::Session(raw::LIBSSH2_ERROR_EAGAIN)) {
+            wrapper.0 = None;
+            self.inner = None;
         }
+        rc
     }
 
     fn error_code_into_error(
