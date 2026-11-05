@@ -5,7 +5,7 @@ authors = ["Alex Crichton <alex@alexcrichton.com>", "Wez Furlong <wez@wezfurlong
 links = "ssh2"
 build = "build.rs"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/alexcrichton/ssh2-rs"
+repository = "https://github.com/rust-lang/ssh2-rs"
 documentation = "https://docs.rs/libssh2-sys"
 description = "Native bindings to the libssh2 library"
 
