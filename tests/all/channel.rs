@@ -134,10 +134,13 @@ fn shell() {
     channel.request_pty("xterm", None, None).unwrap();
     eprintln!("shell");
     channel.shell().unwrap();
+    let _ = channel.write_all(b"exit\n");
+    consume_stdio(&mut channel);
+    channel.wait_eof().unwrap();
     eprintln!("close");
     channel.close().unwrap();
+    channel.wait_close().unwrap();
     eprintln!("done");
-    consume_stdio(&mut channel);
 }
 
 #[test]
