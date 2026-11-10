@@ -15,7 +15,7 @@ jobs:
     permissions:
       pull-requests: write # Required by `release-plz/action` to detect the release PR and its commits / create and update pull requests.
       contents: write # Required by `release-plz/action` to push tags, and create releases. / push to the pull request branch.
-      id-token: write
+      id-token: write # Required by `release-plz/action` to fetch an OIDC token.
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
