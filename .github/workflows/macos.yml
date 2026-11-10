@@ -20,7 +20,7 @@ jobs:
       with:
         persist-credentials: false
     - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+      run: rustup install stable && rustup default stable
     - name: Build and test
       run: |
         rustc -V

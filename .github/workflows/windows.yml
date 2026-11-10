@@ -23,9 +23,10 @@ jobs:
       with:
         persist-credentials: false
     - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        target: ${{ matrix.env.TARGET }}
+      run: rustup install stable -t ${env:TARGET} && rustup default stable
+      shell: pwsh
+      env:
+        TARGET: ${{ matrix.env.TARGET }}
     - name: Build and test
       env:
         TARGET: ${{ matrix.env.TARGET }}
