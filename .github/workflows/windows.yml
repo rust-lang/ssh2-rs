@@ -8,6 +8,8 @@ on:
     branches:
     - master
 
+permissions: {}
+
 jobs:
   build:
     strategy:
@@ -19,11 +21,14 @@ jobs:
         - TARGET: i686-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v1
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+    - uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1.2.0
       with:
-        target: ${{ matrix.env.TARGET }}
+        persist-credentials: false
+    - name: Install Rust
+      run: rustup install stable -t ${env:TARGET} && rustup default stable
+      shell: pwsh
+      env:
+        TARGET: ${{ matrix.env.TARGET }}
     - name: Build and test
       env:
         TARGET: ${{ matrix.env.TARGET }}

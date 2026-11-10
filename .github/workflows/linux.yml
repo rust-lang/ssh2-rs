@@ -8,6 +8,8 @@ on:
     branches:
     - master
 
+permissions: {}
+
 jobs:
   build:
     strategy:
@@ -17,11 +19,13 @@ jobs:
         rust_toolchain: [stable, beta]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v1
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@master
+    - uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1.2.0
       with:
-        toolchain: ${{ matrix.rust_toolchain }}
+        persist-credentials: false
+    - name: Install Rust
+      run: rustup install ${TOOLCHAIN} && rustup default ${TOOLCHAIN}
+      env:
+        TOOLCHAIN: ${{ matrix.rust_toolchain }}
     - name: Build and test
       run: |
         rustc -V
