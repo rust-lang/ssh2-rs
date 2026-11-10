@@ -1,0 +1,6 @@
+[workspace]
+git_tag_name = "{{ package }}-{{ version }}"
+
+[[package]]
+name = "ssh2"
+git_tag_name = "{{ version }}"
