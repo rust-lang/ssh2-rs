@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: publish
     permissions:
-      pull-requests: write
+      pull-requests: write # Required by `release-plz/action` to detect the release PR and its commits / create and update pull requests.
       contents: write
       id-token: write
     steps:
