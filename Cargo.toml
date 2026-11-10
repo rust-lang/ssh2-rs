@@ -1,6 +1,6 @@
 [package]
 name = "ssh2"
-version = "0.9.7"
+version = "0.9.8"
 authors = ["Alex Crichton <alex@alexcrichton.com>", "Wez Furlong <wez@wezfurlong.org>", "Matteo Bigoi <bigo@crisidev.org>"]
 license = "MIT OR Apache-2.0"
 keywords = ["ssh"]
@@ -20,7 +20,7 @@ openssl-on-win32 = ["libssh2-sys/openssl-on-win32"]
 [dependencies]
 bitflags = "2"
 libc = "0.2"
-libssh2-sys = { path = "libssh2-sys", version = "0.3.4" }
+libssh2-sys = { path = "libssh2-sys", version = "0.3.5" }
 parking_lot = "0.12"
 
 [dev-dependencies]
