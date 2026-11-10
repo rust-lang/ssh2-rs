@@ -19,7 +19,7 @@ jobs:
         - TARGET: i686-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1.2.0
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
       with:
