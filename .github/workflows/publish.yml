@@ -14,7 +14,7 @@ jobs:
     environment: publish
     permissions:
       pull-requests: write # Required by `release-plz/action` to detect the release PR and its commits / create and update pull requests.
-      contents: write
+      contents: write # Required by `release-plz/action` to push tags, and create releases. / push to the pull request branch.
       id-token: write
     steps:
       - name: Checkout repository
