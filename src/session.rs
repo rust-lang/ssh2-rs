@@ -1174,6 +1174,10 @@ impl SessionInner {
 
 impl Drop for SessionInner {
     fn drop(&mut self) {
+        // Set ssh2 to blocking during the drop, like the other Drop
+        // implementations in this crate, so libssh2_session_free can complete
+        // instead of returning EAGAIN and leaking the whole session.
+        self.set_blocking(true);
         unsafe {
             let _rc = raw::libssh2_session_free(self.raw);
         }
