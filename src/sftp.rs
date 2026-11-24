@@ -155,6 +155,18 @@ pub enum OpenType {
     Dir = raw::LIBSSH2_SFTP_OPENDIR as isize,
 }
 
+/// Returns true when the native handle was not consumed and the operation can
+/// be retried. `BLOCK_ADJUST` converts an internal `EAGAIN` into `TIMEOUT` when
+/// the API timeout expires, so both codes are retryable.
+fn is_eagain_or_timeout(error: &Error) -> bool {
+    match error.code() {
+        ErrorCode::Session(code) => {
+            code == raw::LIBSSH2_ERROR_EAGAIN || code == raw::LIBSSH2_ERROR_TIMEOUT
+        }
+        _ => false,
+    }
+}
+
 impl Sftp {
     pub(crate) fn from_raw_opt(
         raw: *mut raw::LIBSSH2_SFTP,
@@ -474,8 +486,10 @@ impl Sftp {
             .rc(unsafe { raw::libssh2_sftp_shutdown(inner.raw) });
 
         // EAGAIN leaves the native handle alive so shutdown can be retried (or
-        // completed by Drop). Every other result consumes the native handle.
-        if !matches!(&rc, Err(e) if e.code() == ErrorCode::Session(raw::LIBSSH2_ERROR_EAGAIN)) {
+        // completed by Drop). BLOCK_ADJUST converts an internal EAGAIN into
+        // TIMEOUT when the API timeout expires, so TIMEOUT is retryable too.
+        // Every other result consumes the native handle.
+        if !matches!(&rc, Err(e) if is_eagain_or_timeout(e)) {
             wrapper.0 = None;
             self.inner = None;
         }
@@ -675,11 +689,12 @@ impl File {
             })
         };
 
-        // If EGAIN was returned, we'll need to call this again to complete the operation.
-        // If any other error was returned, or if it completed OK, we must not use the
-        // handle again.
+        // If EAGAIN or TIMEOUT was returned, we'll need to call this again to
+        // complete the operation. BLOCK_ADJUST converts an internal EAGAIN
+        // into TIMEOUT when the API timeout expires; the native handle is still
+        // alive in that case. Any other error, or success, consumes the handle.
         match rc {
-            Err(e) if e.code() == ErrorCode::Session(raw::LIBSSH2_ERROR_EAGAIN) => Err(e),
+            Err(e) if is_eagain_or_timeout(&e) => Err(e),
             rc => {
                 self.inner = None;
                 rc
